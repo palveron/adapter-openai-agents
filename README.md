@@ -1,27 +1,27 @@
-# vexis-openai-agents
+# palveron-openai-agents
 
-VEXIS AI Governance for the **OpenAI Agents SDK** — input and output guardrails with audit trails.
+PALVERON AI Governance for the **OpenAI Agents SDK** — input and output guardrails with audit trails.
 
-[![PyPI](https://img.shields.io/pypi/v/vexis-openai-agents.svg?style=flat-square)](https://pypi.org/project/vexis-openai-agents/)
+[![PyPI](https://img.shields.io/pypi/v/palveron-openai-agents.svg?style=flat-square)](https://pypi.org/project/palveron-openai-agents/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 
 ## Installation
 
 ```bash
-pip install vexis-openai-agents
+pip install palveron-openai-agents
 ```
 
 ## Quick Start
 
 ```python
 from agents import Agent
-from vexis_openai_agents import vexis_input_guardrail, vexis_output_guardrail
+from palveron_openai_agents import palveron_input_guardrail, palveron_output_guardrail
 
 agent = Agent(
     name="assistant",
     instructions="You are a helpful assistant.",
-    input_guardrails=[vexis_input_guardrail(api_key="gp_live_xxx")],
-    output_guardrails=[vexis_output_guardrail(api_key="gp_live_xxx")],
+    input_guardrails=[palveron_input_guardrail(api_key="pv_live_xxx")],
+    output_guardrails=[palveron_output_guardrail(api_key="pv_live_xxx")],
 )
 
 # Inputs with PII → blocked before the agent sees them
@@ -32,16 +32,16 @@ agent = Agent(
 
 | Guardrail | When | What happens on BLOCKED |
 |-----------|------|------------------------|
-| `vexis_input_guardrail` | Before agent processes input | Raises `GuardrailTripwireTriggered` |
-| `vexis_output_guardrail` | Before output reaches user | Raises `GuardrailTripwireTriggered` |
+| `palveron_input_guardrail` | Before agent processes input | Raises `GuardrailTripwireTriggered` |
+| `palveron_output_guardrail` | Before output reaches user | Raises `GuardrailTripwireTriggered` |
 
-Every check creates an immutable trace in your VEXIS project for audit and compliance.
+Every check creates an immutable trace in your PALVERON project for audit and compliance.
 
 ## Configuration
 
 ```python
-guardrail = vexis_input_guardrail(
-    api_key="gp_live_xxx",
+guardrail = palveron_input_guardrail(
+    api_key="pv_live_xxx",
     base_url="https://gateway.internal.corp:8080",  # On-prem
     fail_open=False,          # Block on gateway errors (default)
     metadata={"team": "ml"},  # Extra metadata on traces
@@ -50,9 +50,9 @@ guardrail = vexis_input_guardrail(
 
 ## Links
 
-- [Documentation](https://docs.vexis.io/integrations/openai-agents)
-- [VEXIS Dashboard](https://app.vexis.io)
-- [GitHub](https://github.com/disruptivetrends/vexis-openai-agents)
+- [Documentation](https://docs.palveron.com/integrations/openai-agents)
+- [PALVERON Dashboard](https://app.palveron.com)
+- [GitHub](https://github.com/palveron/palveron-openai-agents)
 
 ## License
 

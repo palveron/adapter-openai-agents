@@ -1,20 +1,20 @@
 """
-vexis-openai-agents — VEXIS Governance for the OpenAI Agents SDK
+palveron-openai-agents — PALVERON Governance for the OpenAI Agents SDK
 ================================================================
 
 Middleware hooks for the official OpenAI Agents framework.
-Checks agent inputs, outputs, and tool calls against VEXIS policies.
+Checks agent inputs, outputs, and tool calls against PALVERON policies.
 
 Usage::
 
-    from vexis_openai_agents import vexis_input_guardrail, vexis_output_guardrail
+    from palveron_openai_agents import palveron_input_guardrail, palveron_output_guardrail
     from agents import Agent
 
     agent = Agent(
         name="assistant",
         instructions="You are a helpful assistant.",
-        input_guardrails=[vexis_input_guardrail(api_key="gp_live_xxx")],
-        output_guardrails=[vexis_output_guardrail(api_key="gp_live_xxx")],
+        input_guardrails=[palveron_input_guardrail(api_key="pv_live_xxx")],
+        output_guardrails=[palveron_output_guardrail(api_key="pv_live_xxx")],
     )
 """
 
@@ -23,20 +23,20 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from vexis import Vexis, VerifyRequest, VexisError
+from palveron import Palveron, VerifyRequest, PalveronError
 
 __version__ = "0.1.0"
 __all__ = [
-    "vexis_input_guardrail",
-    "vexis_output_guardrail",
-    "VexisGuardrailResult",
+    "palveron_input_guardrail",
+    "palveron_output_guardrail",
+    "PalveronGuardrailResult",
 ]
 
-logger = logging.getLogger("vexis_openai_agents")
+logger = logging.getLogger("palveron_openai_agents")
 
 
-class VexisGuardrailResult:
-    """Result of a VEXIS governance check for OpenAI Agents."""
+class PalveronGuardrailResult:
+    """Result of a PALVERON governance check for OpenAI Agents."""
 
     def __init__(
         self,
@@ -53,33 +53,33 @@ class VexisGuardrailResult:
         self.output = output
 
     def __repr__(self) -> str:
-        return f"VexisGuardrailResult(decision={self.decision!r}, trace_id={self.trace_id!r})"
+        return f"PalveronGuardrailResult(decision={self.decision!r}, trace_id={self.trace_id!r})"
 
 
-def vexis_input_guardrail(
+def palveron_input_guardrail(
     api_key: str,
     *,
-    base_url: str = "https://gateway.vexis.io",
+    base_url: str = "https://gateway.palveron.com",
     fail_open: bool = False,
     metadata: Optional[dict[str, Any]] = None,
 ):
     """
-    Create a VEXIS input guardrail for OpenAI Agents.
+    Create a PALVERON input guardrail for OpenAI Agents.
 
     Checks the user's input before the agent processes it.
-    Raises ``GuardrailTripwireTriggered`` if VEXIS blocks the input.
+    Raises ``GuardrailTripwireTriggered`` if PALVERON blocks the input.
 
     Example::
 
         from agents import Agent
-        from vexis_openai_agents import vexis_input_guardrail
+        from palveron_openai_agents import palveron_input_guardrail
 
         agent = Agent(
             name="assistant",
-            input_guardrails=[vexis_input_guardrail(api_key="gp_live_xxx")],
+            input_guardrails=[palveron_input_guardrail(api_key="pv_live_xxx")],
         )
     """
-    client = Vexis(api_key=api_key, base_url=base_url)
+    client = Palveron(api_key=api_key, base_url=base_url)
     base_meta = {**(metadata or {}), "source": "openai-agents", "event": "input_guardrail"}
 
     async def _guardrail(ctx: Any, agent: Any, input_data: Any) -> Optional[Any]:
@@ -92,58 +92,58 @@ def vexis_input_guardrail(
 
             if result.is_blocked:
                 logger.warning(
-                    "🚫 VEXIS BLOCKED input — %s (trace: %s)", result.reason, result.trace_id
+                    "🚫 PALVERON BLOCKED input — %s (trace: %s)", result.reason, result.trace_id
                 )
                 # Import here to avoid hard dependency on specific agents SDK version
                 try:
                     from agents import GuardrailTripwireTriggered
 
                     raise GuardrailTripwireTriggered(
-                        f"Input blocked by VEXIS: {result.reason} (trace: {result.trace_id})"
+                        f"Input blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
                     )
                 except ImportError:
                     raise RuntimeError(
-                        f"Input blocked by VEXIS: {result.reason} (trace: {result.trace_id})"
+                        f"Input blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
                     )
 
-            logger.debug("✅ VEXIS ALLOWED input (trace: %s)", result.trace_id)
+            logger.debug("✅ PALVERON ALLOWED input (trace: %s)", result.trace_id)
             return None  # Allow — no tripwire
 
-        except (VexisError, Exception) as e:
+        except (PalveronError, Exception) as e:
             if isinstance(e, (RuntimeError,)):
                 raise
             if fail_open:
-                logger.warning("⚠️ VEXIS input check error, fail-open: %s", e)
+                logger.warning("⚠️ PALVERON input check error, fail-open: %s", e)
                 return None
-            raise RuntimeError(f"VEXIS governance error (fail-closed): {e}")
+            raise RuntimeError(f"PALVERON governance error (fail-closed): {e}")
 
-    _guardrail.__name__ = "vexis_input_guardrail"
+    _guardrail.__name__ = "palveron_input_guardrail"
     return _guardrail
 
 
-def vexis_output_guardrail(
+def palveron_output_guardrail(
     api_key: str,
     *,
-    base_url: str = "https://gateway.vexis.io",
+    base_url: str = "https://gateway.palveron.com",
     fail_open: bool = False,
     metadata: Optional[dict[str, Any]] = None,
 ):
     """
-    Create a VEXIS output guardrail for OpenAI Agents.
+    Create a PALVERON output guardrail for OpenAI Agents.
 
     Checks the agent's output before it's returned to the user.
 
     Example::
 
         from agents import Agent
-        from vexis_openai_agents import vexis_output_guardrail
+        from palveron_openai_agents import palveron_output_guardrail
 
         agent = Agent(
             name="assistant",
-            output_guardrails=[vexis_output_guardrail(api_key="gp_live_xxx")],
+            output_guardrails=[palveron_output_guardrail(api_key="pv_live_xxx")],
         )
     """
-    client = Vexis(api_key=api_key, base_url=base_url)
+    client = Palveron(api_key=api_key, base_url=base_url)
     base_meta = {**(metadata or {}), "source": "openai-agents", "event": "output_guardrail"}
 
     async def _guardrail(ctx: Any, agent: Any, output_data: Any) -> Optional[Any]:
@@ -156,31 +156,31 @@ def vexis_output_guardrail(
 
             if result.is_blocked:
                 logger.warning(
-                    "🚫 VEXIS BLOCKED output — %s (trace: %s)", result.reason, result.trace_id
+                    "🚫 PALVERON BLOCKED output — %s (trace: %s)", result.reason, result.trace_id
                 )
                 try:
                     from agents import GuardrailTripwireTriggered
 
                     raise GuardrailTripwireTriggered(
-                        f"Output blocked by VEXIS: {result.reason} (trace: {result.trace_id})"
+                        f"Output blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
                     )
                 except ImportError:
                     raise RuntimeError(
-                        f"Output blocked by VEXIS: {result.reason} (trace: {result.trace_id})"
+                        f"Output blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
                     )
 
-            logger.debug("✅ VEXIS ALLOWED output (trace: %s)", result.trace_id)
+            logger.debug("✅ PALVERON ALLOWED output (trace: %s)", result.trace_id)
             return None
 
-        except (VexisError, Exception) as e:
+        except (PalveronError, Exception) as e:
             if isinstance(e, (RuntimeError,)):
                 raise
             if fail_open:
-                logger.warning("⚠️ VEXIS output check error, fail-open: %s", e)
+                logger.warning("⚠️ PALVERON output check error, fail-open: %s", e)
                 return None
-            raise RuntimeError(f"VEXIS governance error (fail-closed): {e}")
+            raise RuntimeError(f"PALVERON governance error (fail-closed): {e}")
 
-    _guardrail.__name__ = "vexis_output_guardrail"
+    _guardrail.__name__ = "palveron_output_guardrail"
     return _guardrail
 
 
