@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "palveron-openai-agents"
-version = "1.0.0"
+version = "1.1.0"
 description = "Official Palveron integration for the OpenAI Agents SDK — drop-in middleware for policy enforcement, PII masking, and audit trails."
 readme = "README.md"
 license = { text = "MIT" }
@@ -37,7 +37,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "palveron-sdk>=1.0.0",
+    "palveron-sdk>=1.1.0",
     "openai>=1.0",
 ]
 

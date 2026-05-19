@@ -25,7 +25,7 @@ from typing import Any, Optional
 
 from palveron import Palveron, VerifyRequest, PalveronError
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 __all__ = [
     "palveron_input_guardrail",
     "palveron_output_guardrail",
@@ -89,23 +89,7 @@ def palveron_input_guardrail(
 
         try:
             result = client.verify(VerifyRequest(prompt=text, metadata=base_meta))
-
-            if result.is_blocked:
-                logger.warning(
-                    "🚫 PALVERON BLOCKED input — %s (trace: %s)", result.reason, result.trace_id
-                )
-                # Import here to avoid hard dependency on specific agents SDK version
-                try:
-                    from agents import GuardrailTripwireTriggered
-
-                    raise GuardrailTripwireTriggered(
-                        f"Input blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
-                    )
-                except ImportError:
-                    raise RuntimeError(
-                        f"Input blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
-                    )
-
+            _trip_if_non_pass(result, "input")
             logger.debug("✅ PALVERON ALLOWED input (trace: %s)", result.trace_id)
             return None  # Allow — no tripwire
 
@@ -153,22 +137,7 @@ def palveron_output_guardrail(
 
         try:
             result = client.verify(VerifyRequest(prompt=text, metadata=base_meta))
-
-            if result.is_blocked:
-                logger.warning(
-                    "🚫 PALVERON BLOCKED output — %s (trace: %s)", result.reason, result.trace_id
-                )
-                try:
-                    from agents import GuardrailTripwireTriggered
-
-                    raise GuardrailTripwireTriggered(
-                        f"Output blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
-                    )
-                except ImportError:
-                    raise RuntimeError(
-                        f"Output blocked by PALVERON: {result.reason} (trace: {result.trace_id})"
-                    )
-
+            _trip_if_non_pass(result, "output")
             logger.debug("✅ PALVERON ALLOWED output (trace: %s)", result.trace_id)
             return None
 
@@ -182,6 +151,41 @@ def palveron_output_guardrail(
 
     _guardrail.__name__ = "palveron_output_guardrail"
     return _guardrail
+
+
+def _trip_if_non_pass(result: Any, surface: str) -> None:
+    """Raise the OpenAI-Agents tripwire (or RuntimeError fallback) when
+    the PALVERON decision is a non-pass outcome.
+
+    Sprint 87 — the gateway emits three non-pass decisions for the
+    verify path: ``BLOCKED`` (policy / capability / budget),
+    ``PENDING_APPROVAL`` (queued for a human approver) and
+    ``RATE_LIMITED`` (tier quota hit). All three halt the agent so it
+    doesn't silently consume disallowed output; the caller branches on
+    the tripwire's message / ``trace_id`` to do retry-vs-escalate.
+    """
+    decision_value = result.decision.value
+    non_pass = {
+        "BLOCKED": "🚫",
+        "PENDING_APPROVAL": "⏳",
+        "RATE_LIMITED": "🚦",
+    }
+    if decision_value not in non_pass:
+        return
+
+    logger.warning(
+        "%s PALVERON %s %s — %s (trace: %s)",
+        non_pass[decision_value], decision_value, surface, result.reason, result.trace_id,
+    )
+    message = (
+        f"{surface.capitalize()} {decision_value.lower().replace('_', ' ')} by "
+        f"PALVERON: {result.reason} (trace: {result.trace_id})"
+    )
+    try:
+        from agents import GuardrailTripwireTriggered  # type: ignore[import-not-found]
+        raise GuardrailTripwireTriggered(message)
+    except ImportError:
+        raise RuntimeError(message)
 
 
 def _extract_text(data: Any) -> str:
